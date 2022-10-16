@@ -38,11 +38,11 @@ void loop() {
     Serial.print(face->box_left);
     Serial.print(", ");
     Serial.print(face->box_top);
-    Serial.print("), ");
-    Serial.print(face->box_width);
-    Serial.print("x");
-    Serial.print(face->box_height);
+    Serial.print("), (");
+    Serial.print(face->box_right);
     Serial.print(", ");
+    Serial.print(face->box_bottom);
+    Serial.print("), ");
     if (face->is_facing) {
       Serial.println("facing");
     } else {
