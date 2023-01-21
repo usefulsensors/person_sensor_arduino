@@ -1,4 +1,3 @@
-#include <Serial.h>
 #include <Wire.h>
 
 #include "person_sensor.h"

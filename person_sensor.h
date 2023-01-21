@@ -78,13 +78,34 @@ typedef struct __attribute__ ((__packed__)) {
 // Fetch the latest results from the sensor. Returns false if the read didn't
 // succeed.
 inline bool person_sensor_read(person_sensor_results_t* results) {
-    Wire.requestFrom(PERSON_SENSOR_I2C_ADDRESS, sizeof(person_sensor_results_t));
-    if (Wire.available() != sizeof(person_sensor_results_t)) {
-        return false;
-    }
+    // For an explanation of why we're doing the read in chunks see 
+    // https://www.arduino.cc/reference/en/language/functions/communication/wire/
+    // In particular: "The Wire library implementation uses a 32 byte buffer, 
+    // therefore any communication should be within this limit. Exceeding 
+    // bytes in a single transmission will just be dropped."
+    // I missed this warning in my initial implementatiom, which caused 
+    // https://github.com/usefulsensors/person_sensor_arduino/issues/2 on
+    // older boards like the Uno.
+    const int maxBytesPerChunk = 32;
+    const int totalBytes = sizeof(person_sensor_results_t);
     int8_t* results_bytes = (int8_t*)(results);
-    for (unsigned int i=0; i < sizeof(person_sensor_results_t); ++i) {
-        results_bytes[i] = Wire.read();
+    int index = 0;
+    while (index < totalBytes) {
+        const int bytesRemaining = totalBytes - index;
+        const int bytesThisChunk = min(bytesRemaining, maxBytesPerChunk);
+        const int endIndex = index + bytesThisChunk;
+        const bool isLastChunk = (bytesRemaining <= maxBytesPerChunk);
+        Wire.requestFrom(PERSON_SENSOR_I2C_ADDRESS, bytesThisChunk, isLastChunk);
+        for (; index < endIndex; ++index) {
+            if (Wire.available() < 1) {
+                Serial.print("Only ");
+                Serial.print(index);
+                Serial.print(" bytes available on I2C, but we need ");
+                Serial.println(bytesThisChunk);
+                return false;
+            }
+            results_bytes[index] = Wire.read();
+        }
     }
     return true;
 }
